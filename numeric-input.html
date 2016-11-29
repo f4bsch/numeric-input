@@ -1,0 +1,161 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-form-element-behavior/iron-form-element-behavior.html">
+<link rel="import" href="../paper-input/paper-input-behavior.html">
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../paper-slider/paper-slider.html">
+
+<!--
+`numeric-input`
+An input element for numeric properties. It extends `paper-input` with additional input modes.
+Users can tap and drag up/down to change the value or use the mouse scroll wheel.
+
+
+@demo demo/index.html 
+-->
+
+<dom-module id="numeric-input">
+  <template>
+    <style>
+            :host {
+                display: inline-block;
+                vertical-align: -1.75em;
+            }
+
+            :host #input:after {
+                content: ".";
+                clear: both;
+                display: block;
+                visibility: hidden;
+                height: 0px;
+            }
+
+            :host #input {
+                display: block;
+            }
+
+			/* hide X in IE */
+            #input /deep/ input::-ms-clear {
+                display: none !important;
+            }
+
+            #input /deep/ input {
+                text-align: center !important;
+            }
+			
+			:host #inputWrap {
+				position: relative;
+			}
+
+			:host paper-slider {
+				position: absolute;
+			}
+        </style>
+
+		<!-- <div id="inputWrap"> -->
+        <paper-input id="input" on-track="_onTrack" on-change="_onChange" label="[[label]]" value="{{value}}"
+                     prevent-invalid-input type="number" min="[[min]]" max="[[max]]" step="[[step]]">
+            <content></content>
+            <div suffix id="suffix">[[unit]]</div>
+        </paper-input>
+		<!--
+		<paper-slider pin value="[[value]]" min="-60" max="[[max]]" step="[[step]]"></paper-slider>
+		</div>
+		-->
+  </template>
+
+  <script>
+    Polymer({
+
+      is: 'numeric-input',
+     /*
+
+        TODO: increment/dec with cursor + scrolling
+        dragging does not work properly anymore?!
+         */
+		 
+		     behaviors: [
+      Polymer.IronFormElementBehavior,
+      Polymer.PaperInputBehavior
+    ],
+
+        properties: {
+            unit: {type: String, observer: '_unitChanged'}
+        },
+
+        ready: function () {
+            // fix:
+            this.addEventListener('touchmove', function (e) {
+                e.preventDefault();
+            });
+
+            this.addEventListener('wheel', function (e) {
+                e.preventDefault();
+                var s = parseFloat(this.step) || 1;
+                console.log(e, this.value);
+                // IE does not have Math.sign
+                this.value = this._fixFloatPrecision(parseFloat(this.value) + (((e.wheelDeltaY || -e.deltaY) >= 0 ? 1 : -1) * s));
+                this.fire('change');
+            });
+        },
+
+        _fixFloatPrecision: function (v) {
+            var s = this.step || 1;
+            var v = Math.round((Math.round(v / s) * s) * 1000) / 1000;
+
+            var min = parseFloat(this.min), max = parseFloat(this.max);
+            if (v > max) v = max;
+            if (v < min) v = min;
+
+            return v;
+        },
+
+
+        get _focusableElement() {
+            return this.$.input._focusableElement;
+        },
+
+        _changeValue: function () {
+            this.fire('value-change');
+        },
+
+        _onTrack: function (event) {
+            event.stopPropagation();
+            //event.stopImmediatePropagation();
+            //event.preventDefault();
+            //console.log(event.target);
+            switch (event.detail.state) {
+                case 'start':
+                    //this._trackStart(event);
+                    this._xStart = event.detail.x;
+					this._yStart = event.detail.y;
+                    this._valueStart = parseFloat(this.value);
+                    break;
+                case 'track':
+                    //this._trackX(event);
+                    var min = parseFloat(this.min), max = parseFloat(this.max);
+                    var dfy = ((this._yStart - event.detail.y) / document.documentElement.clientHeight);
+					var dfx = ((event.detail.x - this._xStart) / document.documentElement.clientWidth);
+					
+					var eps = 0.01;
+					var df = ((Math.abs(dfx) > Math.abs(dfy)) ? dfx : dfy);
+					df = (df < 0) ? -((df-eps)*(df-eps)) : ((df+eps)*(df+eps));
+                    var dv = (max - min) * df / 2;
+					//console.log(this._yStart - event.detail.y, df, dv);
+                    var v = this._fixFloatPrecision(this._valueStart + dv);
+                    if (this.value != v) {
+                        this.value = v;
+                        this.fire('change');
+                    }
+                    break;
+                case 'end':
+                    //this._trackEnd();
+                    break;
+            }
+        },
+
+        _unitChanged: function(u) {
+
+        }
+    });
+  </script>
+</dom-module>
