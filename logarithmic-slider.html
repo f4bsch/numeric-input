@@ -1,0 +1,80 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../paper-slider/paper-slider.html">
+<link rel="import" href="numeric-input.html">
+
+
+<!--
+`logarithmic-slider`
+An input element for logarithmic values.
+
+<logarithmic-slider title="Frequency" unit="Hz" min="31.25" max="16000" step="1" value="{{frequency}}"></logarithmic-slider>
+
+@demo demo/index.html 
+-->
+
+<dom-module id="logarithmic-slider">
+  <template>
+    <style>
+            :host {
+                display: inline-block;
+                vertical-align: -1.75em;
+            }
+			
+			:host paper-slider {
+				width: 100%;
+			}
+			
+				:host numeric-input {
+		margin: auto;
+		height: 3em;
+		margin-top: -3em;
+		width: 90px;
+		display: block;
+		/* float: right; margin-right: 1em; height: 1em; margin-top: -2em; width: 80px; */
+	}
+        </style>
+		
+<div>[[title]]:
+		<numeric-input on-change="_inpNumChanged" unit="[[unit]]" value="{{inpNum}}" min="[[min]]" max="[[max]]" step="[[step]]"></numeric-input>
+	</div>
+	<paper-slider on-immediate-value-change="_inpSlidChanged" on-change="_inpSlidChanged" value="{{inpSlider}}" immediate-value="{{inpSlider}}"></paper-slider> <!-- pin -->
+	
+		
+  </template>
+
+  <script>
+    Polymer({
+      is: 'logarithmic-slider',
+        properties: {
+		title: {type:String},
+            unit: {type: String},
+			
+			min: {type: Number, value: 1000/32},
+			max: {type: Number, value: 1000*16},
+			step: {type: Number, value: 1},
+		
+			value: { type: Number, observer: '_valueChanged', notify: true},
+		
+			inpNum:  { type: Number},
+			inpSlider:  { type: Number}
+        },
+		
+		getBaseLog: function (base, y) { return Math.log(y) / Math.log(base); },
+		
+		_valueChanged: function(v) {
+		this.inpNum = Math.round(v*100)/100;
+		this.inpSlider = 100 * this.getBaseLog(this.max/this.min, v / this.min);
+	},
+	
+	_inpNumChanged: function(e) {
+		this.value = e.target.value;
+	},
+	
+	_inpSlidChanged: function(e) {
+		var x = (e.target.immediateValue || e.target.immediateValue || 0) / 100;
+		var v = this.min * Math.pow(this.max/this.min, x);
+		this.value = v;
+	}
+    });
+  </script>
+</dom-module>
